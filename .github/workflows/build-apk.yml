@@ -46,7 +46,15 @@ jobs:
         run: |
           cd jami-android
           chmod +x gradlew
-          ./gradlew -Partchs=arm64-v8a --no-daemon assembleNoPushDebug --stacktrace
+          out=/tmp/build.log
+          for i in 1 2 3; do
+            ./gradlew -Partchs=arm64-v8a --no-daemon assembleNoPushDebug --stacktrace 2>&1 | tee $out
+            code=${PIPESTATUS[0]}
+            [ "$code" -eq 0 ] && exit 0
+            grep -q "failed: timeout\|Could not download" $out || { exit $code; }
+            echo "== download flake, retry $i =="; sleep 30
+          done
+          exit 1
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
