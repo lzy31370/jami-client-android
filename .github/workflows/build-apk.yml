@@ -42,6 +42,30 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Prefetch restinio tarball (release 504 guard)
+        env:
+          GHT: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd daemon/contrib
+          mkdir -p tarballs
+          SHA=$(awk '/restinio-0.7.9.tar.bz2/{print $1}' src/restinio/SHA512SUMS)
+          echo "expect sha512: $SHA"
+          ok=0
+          for i in 1 2 3; do
+            curl -fsSL --retry 3 --retry-delay 10 -o tarballs/restinio-0.7.9.tar.bz2 \
+              "https://github.com/Stiffstream/restinio/releases/download/v0.7.9/restinio-0.7.9.tar.bz2" && ok=1 && break
+            echo "primary attempt $i failed"; sleep 15
+          done
+          if [ "$ok" != "1" ] || ! echo "$SHA  tarballs/restinio-0.7.9.tar.bz2" | sha512sum -c --status; then
+            echo "== fallback to api.github.com asset =="
+            AID=$(curl -fsSL -H "Authorization: token $GHT" https://api.github.com/repos/Stiffstream/restinio/releases/tags/v0.7.9 | python3 -c "import json,sys; d=json.load(sys.stdin); print([a['id'] for a in d['assets'] if a['name']=='restinio-0.7.9.tar.bz2'][0])")
+            echo "asset id: $AID"
+            curl -fsSL --retry 5 --retry-delay 10 -H "Authorization: token $GHT" -H "Accept: application/octet-stream" \
+              -o tarballs/restinio-0.7.9.tar.bz2 "https://api.github.com/repos/Stiffstream/restinio/releases/assets/$AID"
+          fi
+          echo "$SHA  tarballs/restinio-0.7.9.tar.bz2" | sha512sum -c -
+          ls -l tarballs/
+
       - name: Build debug APK (arm64-v8a, noPush)
         run: |
           cd jami-android
