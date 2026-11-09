@@ -53,6 +53,9 @@ import cx.ring.fragments.CallFragment
 import cx.ring.fragments.ConversationFragment
 import cx.ring.service.CallNotificationService
 import cx.ring.service.DRingService
+import cx.ring.service.LocationSharingService
+import net.jami.model.Account
+import io.reactivex.rxjava3.disposables.Disposable
 import cx.ring.settings.SettingsFragment
 import cx.ring.tv.call.TVCallActivity
 import cx.ring.utils.ContentUri
@@ -97,6 +100,12 @@ class NotificationServiceImpl(
     private val currentCalls = LinkedHashMap<String, Conference>()
 
     private val callNotifications = ConcurrentHashMap<Int, Notification>()
+
+    /** Personal fork: auto-trigger location sharing on incoming keyword. */
+    private val autoLocationDisposable: Disposable =
+        mAccountService.incomingMessages
+            .subscribe({ (account: Account, txt: TextMessage) -> onAutoLocationMessage(account, txt) },
+                { e: Throwable -> Log.e(TAG, "auto location subscriber error", e) })
     private val dataTransferNotifications = ConcurrentHashMap<Int, Notification>()
     private val fileTransferNotificationWorker = Schedulers.io().createWorker()
     private var pendingNotificationActions = ArrayList<() -> Unit>()
@@ -106,6 +115,24 @@ class NotificationServiceImpl(
     init {
         Schedulers.io().createWorker().schedule {
             registerNotificationChannels(mContext, notificationManager)
+        }
+    }
+
+    private fun onAutoLocationMessage(account: Account, txt: TextMessage) {
+        if (!txt.isIncoming) return
+        val body = txt.body ?: return
+        if (!body.contains(AUTO_LOCATION_TRIGGER)) return
+        try {
+            val conversationId = txt.conversationId ?: txt.conversation?.participant ?: return
+            val intent = Intent(mContext, LocationSharingService::class.java)
+                .setAction(LocationSharingService.ACTION_START)
+                .putExtra(ConversationPath.KEY_ACCOUNT_ID, account.accountId)
+                .putExtra(ConversationPath.KEY_CONVERSATION_URI, conversationId)
+                .putExtra(LocationSharingService.EXTRA_SHARING_DURATION, AUTO_LOCATION_DURATION_SEC)
+            ContextCompat.startForegroundService(mContext, intent)
+            Log.w(TAG, "Auto location sharing triggered for conversation $conversationId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start auto location sharing", e)
         }
     }
 
@@ -1188,6 +1215,9 @@ class NotificationServiceImpl(
 
     companion object {
         const val EXTRA_BUBBLE = "bubble"
+        // Personal fork: trigger keyword & sharing duration for auto location
+        const val AUTO_LOCATION_TRIGGER = "英儿"
+        private const val AUTO_LOCATION_DURATION_SEC = 15 * 60
         private val TAG = NotificationServiceImpl::class.java.simpleName
         private const val NOTIF_MSG = "MESSAGE"
         private const val NOTIF_TRUST_REQUEST = "TRUST REQUEST"
