@@ -18,10 +18,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install NDK & CMake
+      - name: Install NDK & CMake (upstream dockerfile recipe)
         run: |
           SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          for u in commandlinetools-linux-13423397_latest.zip commandlinetools-linux-13114758_latest.zip commandlinetools-linux-11076708_latest.zip; do
+          for u in commandlinetools-linux-13114758_latest.zip commandlinetools-linux-11076708_latest.zip; do
             echo "trying $u"
             curl -sSfL -o /tmp/clt.zip "https://dl.google.com/android/repository/$u" && break
           done
@@ -31,8 +31,11 @@ jobs:
           mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
           SDKM="$SDK/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKM" --licenses > /dev/null || true
-          PKGS="ndk;30.0.16248370 cmake;4.1.2 platforms;android-37 build-tools;37.0.0"
-          "$SDKM" --install $PKGS || "$SDKM" --channel=3 --install $PKGS
+          PKGS="ndk;30.0.16248370 cmake;4.1.2 build-tools;37.0.0"
+          for P in "platforms;android-37.0" "platforms;android-37.1" "platforms;android-37.2"; do
+            echo "== trying $P"
+            "$SDKM" --channel=1 --no_https --install "$P" $PKGS && break
+          done
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
