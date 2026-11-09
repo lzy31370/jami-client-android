@@ -13,7 +13,7 @@ jobs:
           fetch-depth: 1
 
       - name: Install contrib build deps (gettext/autopoint)
-        run: sudo apt-get update && sudo apt-get install -y gettext
+        run: sudo apt-get update && sudo apt-get install -y autopoint gettext autoconf automake libtool nasm yasm swig pkg-config
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
