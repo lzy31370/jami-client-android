@@ -312,7 +312,7 @@ class LocationSharingFragment : Fragment() {
                     overlay?.myLocation?.let { myLoc -> geoLocations.add(myLoc) }
                     for (vm in locations) {
                         val m = Marker(binding!!.map)
-                        val position = GeoPoint(toGcj(vm.location))
+                        val position = toGcjPoint(vm.location.latitude, vm.location.longitude)
                         m.setInfoWindow(null)
                         m.position = position
                         m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
@@ -588,9 +588,7 @@ class LocationSharingFragment : Fragment() {
             return ret
         }
 
-        private fun wgs2gcj(location: Location): Pair<Double, Double> {
-            val lat = location.latitude
-            val lon = location.longitude
+        private fun wgs2gcj(lat: Double, lon: Double): Pair<Double, Double> {
             if (lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271) return lat to lon
             val a = 6378245.0
             val ee = 0.00669342162296594323
@@ -605,12 +603,19 @@ class LocationSharingFragment : Fragment() {
             return (lat + offLat) to (lon + offLon)
         }
 
+        private fun wgs2gcj(location: Location): Pair<Double, Double> = wgs2gcj(location.latitude, location.longitude)
+
         private fun toGcj(location: Location): Location {
             val g = wgs2gcj(location)
             val out = Location(location)
             out.latitude = g.first
             out.longitude = g.second
             return out
+        }
+
+        private fun toGcjPoint(lat: Double, lon: Double): GeoPoint {
+            val g = wgs2gcj(lat, lon)
+            return GeoPoint(g.first, g.second)
         }
 
         private fun formatDuration(millis: Long, width: FormatWidth): CharSequence {
