@@ -69,7 +69,9 @@ import net.jami.model.Account.ContactLocation
 import net.jami.model.ContactViewModel
 import net.jami.services.ContactService
 import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.modules.MapTileIndex
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
@@ -177,7 +179,7 @@ class LocationSharingFragment : Fragment() {
             }
             binding.locshareToolbar.setNavigationOnClickListener { mShowControlsSubject.onNext(false) }
             binding.locationShareStop.setOnClickListener { stopSharing() }
-            binding.map.setTileSource(TileSourceFactory.MAPNIK)
+            binding.map.setTileSource(amapTileSource())
             binding.map.isHorizontalMapRepetitionEnabled = false
             binding.map.isTilesScaledToDpi = true
             binding.map.setMapOrientation(0f, false)
@@ -310,7 +312,7 @@ class LocationSharingFragment : Fragment() {
                     overlay?.myLocation?.let { myLoc -> geoLocations.add(myLoc) }
                     for (vm in locations) {
                         val m = Marker(binding!!.map)
-                        val position = GeoPoint(vm.location.latitude, vm.location.longitude)
+                        val position = GeoPoint(toGcj(vm.location))
                         m.setInfoWindow(null)
                         m.position = position
                         m.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
@@ -454,15 +456,15 @@ class LocationSharingFragment : Fragment() {
             mServiceDisposableBag.add(binder.service.contactSharing
                     .subscribe { location -> mIsSharingSubject.onNext(location.contains(mPath)) })
             mServiceDisposableBag.add(binder.service.myLocation
-                    .subscribe { location -> marker!!.position = GeoPoint(location) })
+                    .subscribe { location -> marker!!.position = GeoPoint(toGcj(location)) })
             mServiceDisposableBag.add(binder.service.myLocation
                     .firstElement()
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { location ->
                         // start map on first location
                         binding?.let { binding ->
-                            binding.map.setExpectedCenter(GeoPoint(location))
-                            overlay = MyLocationNewOverlay(RxLocationListener(binder.service.myLocation), binding.map)
+                            binding.map.setExpectedCenter(GeoPoint(toGcj(location)))
+                            overlay = MyLocationNewOverlay(RxLocationListener(binder.service.myLocation.map { loc -> toGcj(loc) }), binding.map)
                                 .apply { enableMyLocation() }
                             binding.map.overlays.add(overlay)
                         }
@@ -556,6 +558,59 @@ class LocationSharingFragment : Fragment() {
             args.putBoolean(KEY_SHOW_CONTROLS, showControls)
             fragment.arguments = args
             return fragment
+        }
+
+        // AMap tile source: reachable in mainland China (OSM MAPNIK is blocked there)
+        private fun amapTileSource() = object : XYTileSource("AMap", 1, 19, 256, ".png", arrayOf("https://webrd01.is.autonavi.com")) {
+            override fun getTileURLString(pMapTileIndex: Long): String {
+                val z = MapTileIndex.getZoom(pMapTileIndex)
+                val x = MapTileIndex.getX(pMapTileIndex)
+                val y = MapTileIndex.getY(pMapTileIndex)
+                val hosts = arrayOf("https://webrd01.is.autonavi.com", "https://webrd02.is.autonavi.com", "https://webrd03.is.autonavi.com", "https://webrd04.is.autonavi.com")
+                return hosts[(x + y) % 4] + "/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x=" + x + "&y=" + y + "&z=" + z
+            }
+        }
+
+        // Convert WGS-84 GPS positions to GCJ-02 so markers align with AMap tiles
+        private fun transformLat(x: Double, y: Double): Double {
+            var ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x))
+            ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0
+            ret += (20.0 * Math.sin(y * Math.PI) + 40.0 * Math.sin(y / 3.0 * Math.PI)) * 2.0 / 3.0
+            ret += (160.0 * Math.sin(y / 12.0 * Math.PI) + 320.0 * Math.sin(y * Math.PI / 30.0)) * 2.0 / 3.0
+            return ret
+        }
+
+        private fun transformLon(x: Double, y: Double): Double {
+            var ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x))
+            ret += (20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0 / 3.0
+            ret += (20.0 * Math.sin(x * Math.PI) + 40.0 * Math.sin(x / 3.0 * Math.PI)) * 2.0 / 3.0
+            ret += (150.0 * Math.sin(x / 12.0 * Math.PI) + 300.0 * Math.sin(x / 30.0 * Math.PI)) * 2.0 / 3.0
+            return ret
+        }
+
+        private fun wgs2gcj(location: Location): Pair<Double, Double> {
+            val lat = location.latitude
+            val lon = location.longitude
+            if (lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271) return lat to lon
+            val a = 6378245.0
+            val ee = 0.00669342162296594323
+            val dLat = transformLat(lon - 105.0, lat - 35.0)
+            val dLon = transformLon(lon - 105.0, lat - 35.0)
+            val radLat = lat / 180.0 * Math.PI
+            var magic = Math.sin(radLat)
+            magic = 1 - ee * magic * magic
+            val sqrtMagic = Math.sqrt(magic)
+            val offLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * Math.PI)
+            val offLon = (dLon * 180.0) / (a / sqrtMagic * Math.cos(radLat) * Math.PI)
+            return (lat + offLat) to (lon + offLon)
+        }
+
+        private fun toGcj(location: Location): Location {
+            val g = wgs2gcj(location)
+            val out = Location(location)
+            out.latitude = g.first
+            out.longitude = g.second
+            return out
         }
 
         private fun formatDuration(millis: Long, width: FormatWidth): CharSequence {
