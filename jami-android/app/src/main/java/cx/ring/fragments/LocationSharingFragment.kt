@@ -69,7 +69,7 @@ import net.jami.model.Account.ContactLocation
 import net.jami.model.ContactViewModel
 import net.jami.services.ContactService
 import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.modules.MapTileIndex
+import org.osmdroid.util.MapTileIndex
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.BoundingBox
