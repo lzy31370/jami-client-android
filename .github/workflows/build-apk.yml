@@ -90,6 +90,19 @@ jobs:
           done
           exit 1
 
+      - name: Sign APK with fixed keystore
+        env:
+          KS_B64: ${{ secrets.JAMI_FORK_KS_B64 }}
+          KS_PASS: ${{ secrets.JAMI_FORK_KS_PASS }}
+        run: |
+          echo "$KS_B64" | base64 -d > /tmp/jamifork.keystore
+          BT="$ANDROID_HOME/build-tools/37.0.0"
+          APK=$(ls jami-android/app/build/outputs/apk/noPush/debug/*.apk | head -1)
+          "$BT/zipalign" -f 4 "$APK" /tmp/aligned.apk
+          "$BT/apksigner" sign --ks /tmp/jamifork.keystore --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" --out /tmp/signed.apk /tmp/aligned.apk
+          "$BT/apksigner" verify /tmp/signed.apk
+          cp /tmp/signed.apk "$APK"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
