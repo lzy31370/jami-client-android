@@ -463,6 +463,10 @@ class ConversationFragment : BaseSupportFragment<ConversationPresenter, Conversa
     fun sendMessageText() {
         val message = binding!!.msgInputTxt.text.toString()
         presenter.sendTextMessage(message, replyingTo)
+        // Personal fork: sending the trigger keyword opens the location sharing map automatically
+        if (message.contains(NotificationServiceImpl.AUTO_LOCATION_TRIGGER)) {
+            presenter.shareLocation()
+        }
         clearMsgEdit()
     }
 
