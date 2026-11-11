@@ -719,6 +719,9 @@ class NotificationServiceImpl(
             else -> Notification.VISIBILITY_PRIVATE
         }
         val last = texts.lastEntry()?.value
+        // Privacy: hide message content unless notification visibility is PUBLIC
+        val hideContent = mPreferencesService.settings.notificationVisibility != SettingsFragment.NOTIFICATION_PUBLIC
+        val displayBody = if (hideContent) mContext.getText(R.string.notif_message_hidden).toString() else last?.body
         val intentConversation = Intent(Intent.ACTION_VIEW, path, mContext, HomeActivity::class.java)
             .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val intentDelete = Intent(DRingService.ACTION_CONV_DISMISS, path, mContext, DRingService::class.java)
@@ -730,7 +733,7 @@ class NotificationServiceImpl(
             .setVisibility(notificationVisibility)
             .setSmallIcon(R.drawable.ic_ring_logo_white)
             .setContentTitle(conversationProfile.second)
-            .setContentText(last?.body)
+            .setContentText(displayBody)
             .setLocusId(LocusIdCompat(key))
             .setWhen(last?.timestamp ?: 0)
             .setContentIntent(PendingIntent.getActivity(mContext, random.nextInt(), intentConversation, ContentUri.immutable()))
@@ -785,7 +788,7 @@ class NotificationServiceImpl(
             val contact = textMessage.contact!!
             val contactPerson = if (contact.isUser) null else persons[contact.uri.uri]
             history.addMessage(NotificationCompat.MessagingStyle.Message(
-                textMessage.body,
+                if (hideContent) mContext.getText(R.string.notif_message_hidden) else textMessage.body,
                 textMessage.timestamp,
                 contactPerson
             ))

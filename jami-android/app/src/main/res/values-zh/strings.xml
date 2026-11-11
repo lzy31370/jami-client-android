@@ -80,7 +80,8 @@
   <string name="notif_channel_background_service_descr">允许在任何时间接受电话和消息。</string>
   <string name="notif_group_calls">通话</string>
   <string name="notif_inprogress_group_call">通话中</string>
-  <string name="notif_background_service">Jami 正在后台运行</string>
+  <string name="notif_background_service">正在后台运行</string>
+<string name="notif_message_hidden">发来一条新消息</string>
   <string name="notif_mark_as_read">标记为已读</string>
   <string name="notif_dismiss">解散</string>
   <string name="notif_reply">回复</string>
@@ -90,7 +91,7 @@
   <string name="notif_sync_title">正在同步数据……</string>
   <string name="notif_location_title">正与%1$s分享位置</string>
   <string name="notif_channel_reconnect">后台同步</string>
-  <string name="notif_reconnect_title">Jami正在同步中…</string>
+  <string name="notif_reconnect_title">正在同步中</string>
   <string name="location_share_contact">%1$s正在与您分享位置</string>
   <string name="notif_location_multi_title">正与%1$d联系人分享位置</string>
   <string name="notif_location_remaining">剩余%1$d分钟</string>
