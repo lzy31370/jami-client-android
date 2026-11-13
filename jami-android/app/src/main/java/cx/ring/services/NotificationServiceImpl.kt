@@ -629,6 +629,13 @@ class NotificationServiceImpl(
         if ((conversation.isBubble && texts.isEmpty()) || texts.lastEntry()!!.value.isNotified) {
             return
         }
+        // GA patch: 陈旧未读时间戳守卫——只弹"近期收到"的未读，抑制同步回放的幽灵未读
+        val newestAgeMs = System.currentTimeMillis() - (texts.values.maxOfOrNull { it.timestamp } ?: 0L)
+        if (newestAgeMs > TEXT_NOTIF_MAX_AGE_MS) {
+            Log.w(TAG, "Suppress stale text notification: age=" + newestAgeMs + "ms conversation=" + conversation.uri)
+            cancelTextNotification(conversation.accountId, conversation.uri)
+            return
+        }
         Log.w(TAG, "showTextNotification " + conversation.accountId + " " + conversation.uri)
         mContactService.getLoadedConversation(conversation)
             .subscribe({ cvm -> textNotification(texts, cvm) })
@@ -1237,6 +1244,10 @@ class NotificationServiceImpl(
         const val NOTIF_CHANNEL_PEER_TUNNEL = "peer_tunnel"
         private const val NOTIF_CALL_GROUP = "calls"
         private const val NOTIF_GROUP_SYNC = "sync"
+
+    // GA patch: 澎湃OS幽灵误报守卫窗口。历史回放的陈旧未读(点入无新消息)超过此年龄
+    // 不再弹文本通知；真新消息经3s grace后弹出，年龄远小于窗口。
+    private const val TEXT_NOTIF_MAX_AGE_MS = 120_000L
 
         const val NOTIF_CALL_ID = 1001
 
