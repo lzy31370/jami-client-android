@@ -738,7 +738,7 @@ class ConversationFacade(
         // Multi-device sync race: on reconnect, missed messages can arrive before the
         // "read" sync marker, producing a false "new message" notification. Defer the
         // notification by this grace period and re-evaluate unread state afterwards.
-        private val NOTIFICATION_GRACE_SECONDS = 8L
+        private val NOTIFICATION_GRACE_SECONDS = 3L
     }
 
     init {
