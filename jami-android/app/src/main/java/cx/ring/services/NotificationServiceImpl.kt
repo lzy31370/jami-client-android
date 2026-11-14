@@ -1295,13 +1295,16 @@ class NotificationServiceImpl(
                 .build())
 
             // Missed calls channel
-            notificationManager.createNotificationChannel(NotificationChannelCompat.Builder(NOTIF_CHANNEL_MISSED_CALL, NotificationManager.IMPORTANCE_DEFAULT)
-                .setName(context.getString(R.string.notif_channel_missed_calls))
-                .setSound(null, null)
-                .setGroup(NOTIF_CALL_GROUP)
-                .setVibrationEnabled(false)
-                .setLockscreenVisibility(channelLockscreenVisibility)
-                .build())
+            notificationManager.createNotificationChannel(NotificationChannel(
+                NOTIF_CHANNEL_MISSED_CALL,
+                context.getString(R.string.notif_channel_missed_calls),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                group = NOTIF_CALL_GROUP
+                lockscreenVisibility = channelLockscreenVisibility
+                setSound(null, null)
+                enableVibration(false)
+            })
 
             // Incoming call channel
             notificationManager.createNotificationChannel(NotificationChannel(
