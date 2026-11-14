@@ -80,7 +80,7 @@
   <string name="notif_channel_background_service_descr">允許隨時接聽通話與傳訊。</string>
   <string name="notif_group_calls">通話</string>
   <string name="notif_inprogress_group_call">進行通話</string>
-  <string name="notif_background_service">Jami 正在背景執行</string>
+  <string name="notif_background_service">正在背景執行</string>
   <string name="notif_mark_as_read">標示為已讀</string>
   <string name="notif_dismiss">解除</string>
   <string name="notif_reply">回覆</string>
@@ -90,7 +90,7 @@
   <string name="notif_sync_title">正在同步資料…</string>
   <string name="notif_location_title">正在分享位置至 %1$s</string>
   <string name="notif_channel_reconnect">背景同步</string>
-  <string name="notif_reconnect_title">Jami 正在同步中…</string>
+  <string name="notif_reconnect_title">正在同步中…</string>
   <string name="location_share_contact">%1$s 正在分享位置</string>
   <string name="notif_location_multi_title">正在與 %1$d 聯絡人分享位置</string>
   <string name="notif_location_remaining">剩餘 %1$d 分鐘</string>
@@ -584,7 +584,7 @@
   <string name="notif_channel_peer_tunnel">已設分享的服務</string>
   <string name="notif_channel_peer_tunnel_descr">當對點服務通道在背作用時進行顯示。</string>
   <string name="notif_peer_tunnel_title">已設分享的服務作用中</string>
-  <string name="notif_peer_tunnel_text">Jami 正在背景中保持您的服務連線暢通</string>
+  <string name="notif_peer_tunnel_text">正在背景中保持您的服務連線暢通</string>
   <string name="notif_peer_tunnel_stop_all">全部停止</string>
   <!--Exposed/Hosted services-->
   <string name="shared_services_settings_title">已設分享的服務</string>

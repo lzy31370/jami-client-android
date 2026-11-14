@@ -585,7 +585,7 @@
   <string name="notif_channel_peer_tunnel">共享服务</string>
   <string name="notif_channel_peer_tunnel_descr">当对等服务隧道在后台处于活动状态时显示。</string>
   <string name="notif_peer_tunnel_title">共享服务运行中</string>
-  <string name="notif_peer_tunnel_text">Jami正在后台保持您的服务连接畅通</string>
+  <string name="notif_peer_tunnel_text">正在后台保持您的服务连接畅通</string>
   <string name="notif_peer_tunnel_stop_all">全部停止</string>
   <!--Exposed/Hosted services-->
   <string name="shared_services_settings_title">共享服务</string>

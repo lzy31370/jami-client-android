@@ -106,6 +106,12 @@ class NotificationServiceImpl(
         mAccountService.incomingMessages
             .subscribe({ (account: Account, txt: TextMessage) -> onAutoLocationMessage(account, txt) },
                 { e: Throwable -> Log.e(TAG, "auto location subscriber error", e) })
+
+    /** Personal fork: keep notification channels' lockscreen visibility in sync with user setting. */
+    private val channelVisibilityDisposable: Disposable =
+        mPreferencesService.settingsSubject
+            .subscribe({ applyLockscreenVisibilitySetting() },
+                { e: Throwable -> Log.e(TAG, "channel visibility subscriber error", e) })
     private val dataTransferNotifications = ConcurrentHashMap<Int, Notification>()
     private val fileTransferNotificationWorker = Schedulers.io().createWorker()
     private var pendingNotificationActions = ArrayList<() -> Unit>()
@@ -133,6 +139,30 @@ class NotificationServiceImpl(
             Log.w(TAG, "Auto location sharing triggered for conversation $conversationId")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start auto location sharing", e)
+        }
+    }
+
+    /**
+     * Personal fork fix: notification channels used to be created with a hardcoded
+     * lockscreenVisibility (SECRET/PRIVATE), which silently overrides the user's
+     * "notification visibility" setting on the lock screen. Keep channel
+     * lockscreenVisibility in sync with that setting by deleting and re-creating
+     * any channel whose visibility no longer matches.
+     */
+    private fun applyLockscreenVisibilitySetting() {
+        val desired = when (mPreferencesService.settings.notificationVisibility) {
+            SettingsFragment.NOTIFICATION_PUBLIC -> Notification.VISIBILITY_PUBLIC
+            SettingsFragment.NOTIFICATION_SECRET -> Notification.VISIBILITY_SECRET
+            SettingsFragment.NOTIFICATION_PRIVATE -> Notification.VISIBILITY_PRIVATE
+            else -> Notification.VISIBILITY_PRIVATE
+        }
+        channelLockscreenVisibility = desired
+        val mismatched = notificationManager.notificationChannels
+            .filter { it.id in LOCKSCREEN_VISIBILITY_CHANNELS && it.lockscreenVisibility != desired }
+        if (mismatched.isNotEmpty()) {
+            Log.w(TAG, "Recreating ${mismatched.size} channels with lockscreenVisibility=$desired")
+            mismatched.forEach { notificationManager.deleteNotificationChannel(it.id) }
+            registerNotificationChannels(mContext, notificationManager)
         }
     }
 
@@ -1228,6 +1258,13 @@ class NotificationServiceImpl(
         // Personal fork: trigger keyword & sharing duration for auto location
         const val AUTO_LOCATION_TRIGGER = "英儿"
         private const val AUTO_LOCATION_DURATION_SEC = 15 * 60
+        // Personal fork: channel lockscreen visibility follows the user "notification visibility" setting
+        @Volatile
+        var channelLockscreenVisibility: Int = Notification.VISIBILITY_PRIVATE
+        private val LOCKSCREEN_VISIBILITY_CHANNELS = listOf(
+            NOTIF_CHANNEL_MISSED_CALL, NOTIF_CHANNEL_MESSAGE, NOTIF_CHANNEL_REQUEST,
+            NOTIF_CHANNEL_FILE_TRANSFER, NOTIF_CHANNEL_SYNC, NOTIF_CHANNEL_SERVICE,
+            NOTIF_CHANNEL_PUSH_SYNC, NOTIF_CHANNEL_PEER_TUNNEL)
         private val TAG = NotificationServiceImpl::class.java.simpleName
         private const val NOTIF_MSG = "MESSAGE"
         private const val NOTIF_TRUST_REQUEST = "TRUST REQUEST"
@@ -1263,6 +1300,7 @@ class NotificationServiceImpl(
                 .setSound(null, null)
                 .setGroup(NOTIF_CALL_GROUP)
                 .setVibrationEnabled(false)
+                .setLockscreenVisibility(channelLockscreenVisibility)
                 .build())
 
             // Incoming call channel
@@ -1301,7 +1339,7 @@ class NotificationServiceImpl(
                 context.getString(R.string.notif_channel_messages),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                lockscreenVisibility = channelLockscreenVisibility
                 enableVibration(true)
                 setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), soundAttributes)
             })
@@ -1312,7 +1350,7 @@ class NotificationServiceImpl(
                 context.getString(R.string.notif_channel_requests),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                lockscreenVisibility = channelLockscreenVisibility
                 enableVibration(true)
                 setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), soundAttributes)
             })
@@ -1323,7 +1361,7 @@ class NotificationServiceImpl(
                 context.getString(R.string.notif_channel_file_transfer),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                lockscreenVisibility = channelLockscreenVisibility
                 enableVibration(true)
                 setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), soundAttributes)
             })
@@ -1339,7 +1377,7 @@ class NotificationServiceImpl(
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 group = NOTIF_GROUP_SYNC
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                lockscreenVisibility = channelLockscreenVisibility
                 enableLights(false)
                 enableVibration(false)
                 setShowBadge(false)
@@ -1354,7 +1392,7 @@ class NotificationServiceImpl(
             ).apply {
                 group = NOTIF_GROUP_SYNC
                 description = context.getString(R.string.notif_channel_background_service_descr)
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                lockscreenVisibility = channelLockscreenVisibility
                 enableLights(false)
                 enableVibration(false)
                 setShowBadge(false)
@@ -1367,7 +1405,7 @@ class NotificationServiceImpl(
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 group = NOTIF_GROUP_SYNC
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                lockscreenVisibility = channelLockscreenVisibility
                 enableLights(false)
                 enableVibration(false)
                 setShowBadge(false)
@@ -1381,7 +1419,7 @@ class NotificationServiceImpl(
             ).apply {
                 group = NOTIF_GROUP_SYNC
                 description = context.getString(R.string.notif_channel_peer_tunnel_descr)
-                lockscreenVisibility = Notification.VISIBILITY_PRIVATE
+                lockscreenVisibility = channelLockscreenVisibility
                 enableLights(false)
                 enableVibration(false)
                 setShowBadge(false)
