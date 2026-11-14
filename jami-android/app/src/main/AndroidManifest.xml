@@ -180,6 +180,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- GA patch: 内置启动密码门 -->
+        <activity
+            android:name=".client.AppLockActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".client.ShareActivity"
             android:exported="true"

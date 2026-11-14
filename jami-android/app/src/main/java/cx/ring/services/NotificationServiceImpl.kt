@@ -28,7 +28,6 @@ import android.media.AudioManager
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
-import android.os.SystemClock
 import android.telecom.Connection
 import android.text.TextUtils
 import android.text.format.Formatter
@@ -95,19 +94,6 @@ class NotificationServiceImpl(
     private val mHardwareService: HardwareService
     ) : NotificationService {
 
-    // GA patch: 亮屏宽限窗状态——锁屏冻结期间 daemon 重连回放积压消息会以当前时间落库，
-    // 绕过时间戳守卫；亮屏/解锁后45秒内抑制文本通知，消灭"发来一条新消息"幽灵通知
-    @Volatile
-    private var screenOnGraceUntilMs = 0L
-    private var graceReceiverRegistered = false
-    private val screenOnGraceReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == Intent.ACTION_SCREEN_ON || intent?.action == Intent.ACTION_USER_PRESENT) {
-                screenOnGraceUntilMs = SystemClock.elapsedRealtime() + SCREEN_ON_GRACE_MS
-                Log.w(TAG, "GA patch: screen on/unlock, notification grace window started " + SCREEN_ON_GRACE_MS + "ms")
-            }
-        }
-    }
     private val mNotificationBuilders = SparseArray<NotificationCompat.Builder>()
     private val notificationManager: NotificationManagerCompat = NotificationManagerCompat.from(mContext)
     private val random = Random()
@@ -672,36 +658,6 @@ class NotificationServiceImpl(
             return
         }
         if ((conversation.isBubble && texts.isEmpty()) || texts.lastEntry()!!.value.isNotified) {
-            return
-        }
-        // GA patch: 亮屏宽限窗——首次调用时注册一次系统亮屏/解锁广播，窗口期内抑制回放通知
-        if (!graceReceiverRegistered) {
-            synchronized(this) {
-                if (!graceReceiverRegistered) {
-                    try {
-                        val filter = android.content.IntentFilter(Intent.ACTION_SCREEN_ON)
-                        filter.addAction(Intent.ACTION_USER_PRESENT)
-                        androidx.core.content.ContextCompat.registerReceiver(
-                            mContext, screenOnGraceReceiver, filter,
-                            androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
-                        )
-                        graceReceiverRegistered = true
-                        Log.w(TAG, "GA patch: screen grace receiver registered")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "GA patch: register grace receiver failed", e)
-                    }
-                }
-            }
-        }
-        if (SystemClock.elapsedRealtime() < screenOnGraceUntilMs) {
-            Log.w(TAG, "GA patch: suppress replay notification during screen-on grace window, conversation=" + conversation.uri)
-            return
-        }
-        // GA patch: 陈旧未读时间戳守卫——只弹"近期收到"的未读，抑制同步回放的幽灵未读
-        val newestAgeMs = System.currentTimeMillis() - (texts.values.maxOfOrNull { it.timestamp } ?: 0L)
-        if (newestAgeMs > TEXT_NOTIF_MAX_AGE_MS) {
-            Log.w(TAG, "Suppress stale text notification: age=" + newestAgeMs + "ms conversation=" + conversation.uri)
-            cancelTextNotification(conversation.accountId, conversation.uri)
             return
         }
         Log.w(TAG, "showTextNotification " + conversation.accountId + " " + conversation.uri)
@@ -1319,13 +1275,6 @@ class NotificationServiceImpl(
         const val NOTIF_CHANNEL_PEER_TUNNEL = "peer_tunnel"
         private const val NOTIF_CALL_GROUP = "calls"
         private const val NOTIF_GROUP_SYNC = "sync"
-
-    // GA patch: 澎湃OS幽灵误报守卫窗口。历史回放的陈旧未读(点入无新消息)超过此年龄
-    // 不再弹文本通知；真新消息经3s grace后弹出，年龄远小于窗口。
-    private const val TEXT_NOTIF_MAX_AGE_MS = 120_000L
-
-    // GA patch: 亮屏后通知宽限窗时长
-    private const val SCREEN_ON_GRACE_MS = 45_000L
 
         const val NOTIF_CALL_ID = 1001
 

@@ -163,6 +163,13 @@ class HomeActivity : AppCompatActivity(), ContactPickerFragment.OnContactedPicke
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // GA patch: 内置启动密码门——进程未解锁时强制先过 AppLockActivity
+        if (cx.ring.client.AppLockGate.needLock(this)) {
+            startActivity(android.content.Intent(this, cx.ring.client.AppLockActivity::class.java))
+            finish()
+            return
+        }
+
         localNetworkPermissionPromptShown =
             savedInstanceState?.getBoolean(STATE_LOCAL_NETWORK_PROMPT_SHOWN) ?: false
         notifPermissionPromptShown =

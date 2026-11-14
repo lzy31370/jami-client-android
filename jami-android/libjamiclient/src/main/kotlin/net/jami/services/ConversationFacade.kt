@@ -548,11 +548,7 @@ class ConversationFacade(
             else mAccountService.setMessageDisplayed(txt.account, uri, txt.messageId!!)
         }
 
-        startConversation(accountId, uri)
-            .subscribe { conversation ->
-                Observable.timer(NOTIFICATION_GRACE_SECONDS, TimeUnit.SECONDS)
-                    .subscribe { mNotificationService.showTextNotification(conversation) }
-            }
+        startConversation(accountId, uri).subscribe(mNotificationService::showTextNotification)
     }
 
     fun acceptRequest(conversation: Conversation) {
@@ -734,11 +730,6 @@ class ConversationFacade(
 
     companion object {
         private val TAG = ConversationFacade::class.simpleName!!
-
-        // Multi-device sync race: on reconnect, missed messages can arrive before the
-        // "read" sync marker, producing a false "new message" notification. Defer the
-        // notification by this grace period and re-evaluate unread state afterwards.
-        private val NOTIFICATION_GRACE_SECONDS = 3L
     }
 
     init {
