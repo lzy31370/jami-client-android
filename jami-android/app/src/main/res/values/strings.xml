@@ -248,8 +248,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
     <string name="location_share_action_start">Start sharing</string>
     <string name="location_share_action_stop">Stop sharing</string>
     <string name="location_share_about_title">Map information</string>
-    <string name="location_share_about_message" translatable="false">Map data from OpenStreetMap.\n\n© OpenStreetMap contributors</string>
-    <string name="location_share_about_osm_copy_url" translatable="false">https://www.openstreetmap.org/copyright</string>
+    <string name="about_message" translatable="false">地图数据 © 高德地图 (amap.com)</string>
+    <string name="location_share_about_message" translatable="false">地图数据 © 高德地图\n\n高德地图 amap.com</string>
+    <string name="location_share_about_osm_copy_url" translatable="false">https://www.amap.com/</string>
 
     <!-- Call Fragment -->
     <string name="you_txt_prefix">You:</string>

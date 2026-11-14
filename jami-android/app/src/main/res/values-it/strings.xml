@@ -630,4 +630,5 @@
   <string name="collab_link_add">Aggiungi</string>
   <string name="collab_link_remove">Rimuovi</string>
   <string name="collab_remove">Rimuovi</string>
+    <string name="about_message" translatable="false">Map data © AMap (amap.com)</string>
 </resources>

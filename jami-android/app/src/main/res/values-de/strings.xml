@@ -694,4 +694,5 @@
   <string name="collab_document_removed_message">\"%1$s\" wurde von seinem Autor entfernt.</string>
   <string name="collab_document_removed_locally">Dokument von diesem Gerät entfernt</string>
   <string name="collab_document_removed_locally_message">\"%1$s\" ist nicht mehr auf diesem Gerät. Beim erneuten Öffnen wird es wieder heruntergeladen.</string>
+    <string name="about_message" translatable="false">Map data © AMap (amap.com)</string>
 </resources>
