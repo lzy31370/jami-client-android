@@ -64,6 +64,8 @@ import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Named
+import android.content.Intent
+import cx.ring.client.AppLockActivity
 
 
 abstract class JamiApplication : Application() {
@@ -404,7 +406,15 @@ abstract class JamiApplication : Application() {
                 if (startedActivityCount == 0) appInForeground.onNext(false)
             }
 
-            override fun onActivityResumed(activity: Activity) {}
+            override fun onActivityResumed(activity: Activity) {
+                // GA: 全入口 PIN 锁门 — 任何 Activity 获得前台时未解锁即被 AppLockActivity 覆盖（堵通知深链/分享/外部 Intent 绕锁）
+                if (activity is AppLockActivity) return
+                if (AppLockGate.needLock(applicationContext)) {
+                    Log.w("AppLockGate", "gate: covering " + activity.localClassName)
+                    activity.startActivity(Intent(activity, AppLockActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP))
+                }
+            }
             override fun onActivityPaused(activity: Activity) {}
             override fun onActivitySaveInstanceState(activity: Activity, bundle: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {}
