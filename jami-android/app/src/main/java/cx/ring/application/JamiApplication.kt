@@ -64,7 +64,9 @@ import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Named
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import cx.ring.client.AppLockActivity
 import cx.ring.client.AppLockGate
 
@@ -384,6 +386,13 @@ abstract class JamiApplication : Application() {
     private fun setupActivityListener() {
         var startedActivityCount = 0
 
+        // GA v512: 熄屏广播兜底重锁（部分 ROM 熄屏时 onStop 时机不稳）
+        registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(ctx: android.content.Context?, intent: Intent?) {
+                AppLockGate.markLocked()
+            }
+        }, IntentFilter(Intent.ACTION_SCREEN_OFF))
+
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityPreCreated(activity: Activity, bundle: Bundle?) {
                 bootstrapDaemon()
@@ -404,7 +413,11 @@ abstract class JamiApplication : Application() {
 
             override fun onActivityStopped(activity: Activity) {
                 startedActivityCount = maxOf(0, startedActivityCount - 1)
-                if (startedActivityCount == 0) appInForeground.onNext(false)
+                if (startedActivityCount == 0) {
+                    appInForeground.onNext(false)
+                    // GA v512: 全部界面退到后台(含熄屏)即重新上锁 — 修复 v511 进程级锁永不重锁
+                    AppLockGate.markLocked()
+                }
             }
 
             override fun onActivityResumed(activity: Activity) {

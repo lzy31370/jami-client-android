@@ -38,6 +38,12 @@ object AppLockGate {
         Log.w(TAG, "app unlocked for this process")
     }
 
+    // GA v512: 重新上锁 — 全部界面退后台或熄屏时由 JamiApplication 调用
+    fun markLocked() {
+        unlocked = false
+        Log.w(TAG, "gate: relocked")
+    }
+
     fun isPinSet(context: Context): Boolean =
         context.getSharedPreferences(PREF, Context.MODE_PRIVATE).contains(KEY_PIN_MD5)
 
