@@ -66,6 +66,7 @@ import javax.inject.Inject
 import javax.inject.Named
 import android.content.Intent
 import cx.ring.client.AppLockActivity
+import cx.ring.client.AppLockGate
 
 
 abstract class JamiApplication : Application() {
