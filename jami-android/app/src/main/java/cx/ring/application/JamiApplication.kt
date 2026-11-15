@@ -413,9 +413,10 @@ abstract class JamiApplication : Application() {
 
             override fun onActivityStopped(activity: Activity) {
                 startedActivityCount = maxOf(0, startedActivityCount - 1)
-                if (startedActivityCount == 0) {
+                // GA v513: 锁页自身 onStop(解锁过渡必经)严禁触发重锁 — v512死循环根因
+                if (startedActivityCount == 0 && activity !is AppLockActivity) {
                     appInForeground.onNext(false)
-                    // GA v512: 全部界面退到后台(含熄屏)即重新上锁 — 修复 v511 进程级锁永不重锁
+                    // 全部界面退到后台(含熄屏, 熄屏另有广播兜底)即重新上锁
                     AppLockGate.markLocked()
                 }
             }
