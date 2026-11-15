@@ -158,9 +158,7 @@ class AppLockActivity : AppCompatActivity() {
 
     private fun unlock() {
         AppLockGate.markUnlocked()
-        val intent = Intent(this, HomeActivity::class.java)
-            .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        startActivity(intent)
+        // GA: 仅关闭锁页，揭示真实入口（深链进入的会话不再跳 Home）
         finish()
     }
 
