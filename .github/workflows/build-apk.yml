@@ -42,6 +42,14 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Patch daemon default bootstrap (self-hosted DHT)
+        run: |
+          FILES=$(grep -rl "bootstrap.jami.net" daemon/src/ || true)
+          echo "patched files: $FILES"
+          [ -n "$FILES" ] || { echo "bootstrap.jami.net not found in daemon/src"; exit 1; }
+          sed -i 's/bootstrap\.jami\.net/118.89.27.200:4222/g' $FILES
+          grep -rn "118.89.27.200:4222" daemon/src/ | head -5
+
       - name: Prefetch restinio tarball (release 504 guard)
         env:
           GHT: ${{ secrets.GITHUB_TOKEN }}
